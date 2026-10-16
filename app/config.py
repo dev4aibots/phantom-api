@@ -9,12 +9,6 @@ class Settings(BaseSettings):
     # --- Security ---
     API_SECRET_KEY: str = "change-me-to-a-strong-secret"
 
-    # --- Endpoint obscurity ---
-    # Random URL prefix for ALL endpoints (e.g. /a3f9.../v1/chat/completions).
-    # Empty = a cryptographically random one is generated at startup and
-    # persisted to .env so it stays stable across restarts.
-    ENDPOINT_PREFIX: str = ""
-
     # --- Server ---
     HOST: str = "0.0.0.0"
     PORT: int = 48526
