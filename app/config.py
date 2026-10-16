@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     HEADLESS: bool = True
     BROWSER_TIMEOUT: int = 120000  # milliseconds
 
+    # --- Load control ---
+    MAX_CONCURRENT_CHATS: int = 2  # simultaneous browser chats
+    QUEUE_TIMEOUT: int = 60  # seconds to wait for a free slot before 503
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

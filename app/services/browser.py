@@ -5,8 +5,13 @@ and interacts with chatgpt.com to generate responses.
 """
 
 import asyncio
+import queue
 import threading
 from app.config import settings
+
+
+class ServerBusyError(Exception):
+    """Raised when all browser chat slots are occupied (translate to HTTP 503)."""
 
 
 class BrowserEngine(threading.Thread):
@@ -22,6 +27,8 @@ class BrowserEngine(threading.Thread):
         self.ready = threading.Event()
         self.browser = None
         self.playwright = None
+        # Load control: at most MAX_CONCURRENT_CHATS browser chats at once
+        self._slots = threading.Semaphore(settings.MAX_CONCURRENT_CHATS)
 
     # ------------------------------------------------------------------
     # Thread lifecycle
@@ -67,6 +74,14 @@ class BrowserEngine(threading.Thread):
     # Public API
     # ------------------------------------------------------------------
 
+    def _acquire_slot(self) -> None:
+        """Take a chat slot, or raise ServerBusyError after QUEUE_TIMEOUT."""
+        if not self._slots.acquire(timeout=settings.QUEUE_TIMEOUT):
+            raise ServerBusyError(
+                f"Server busy: all {settings.MAX_CONCURRENT_CHATS} chat slots occupied. "
+                "Try again in a few seconds."
+            )
+
     def chat(self, prompt: str, images: list | None = None) -> str:
         """Send a prompt to ChatGPT and return the response text.
 
@@ -79,17 +94,73 @@ class BrowserEngine(threading.Thread):
         if not self.ready.wait(timeout=30) or self.browser is None:
             raise RuntimeError("Browser engine is not ready. Is Chrome installed?")
 
-        future = asyncio.run_coroutine_threadsafe(
-            self._interact(prompt, images or []), self.loop
-        )
-        return future.result(timeout=settings.BROWSER_TIMEOUT // 1000 + 30)
+        self._acquire_slot()
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self._interact(prompt, images or []), self.loop
+            )
+            return future.result(timeout=settings.BROWSER_TIMEOUT // 1000 + 30)
+        finally:
+            self._slots.release()
+
+    def chat_stream(self, prompt: str, images: list | None = None):
+        """Yield text deltas as Luna types its response.
+
+        Sync generator — safe to run in a worker thread. Each yielded string
+        is the newly typed slice since the previous yield.
+        """
+        if not self.ready.wait(timeout=30) or self.browser is None:
+            raise RuntimeError("Browser engine is not ready. Is Chrome installed?")
+
+        snapshots: "queue.Queue" = queue.Queue()
+        _DONE = object()
+
+        def on_text(full_text: str) -> None:
+            snapshots.put(full_text)
+
+        def run() -> None:
+            try:
+                self._acquire_slot()
+                try:
+                    future = asyncio.run_coroutine_threadsafe(
+                        self._interact(prompt, images or [], on_text=on_text), self.loop
+                    )
+                    future.result(timeout=settings.BROWSER_TIMEOUT // 1000 + 30)
+                finally:
+                    self._slots.release()
+            except BaseException as exc:  # noqa: BLE001 — forwarded to the consumer
+                snapshots.put(exc)
+            finally:
+                snapshots.put(_DONE)
+
+        threading.Thread(target=run, daemon=True).start()
+
+        last = ""
+        while True:
+            item = snapshots.get()
+            if item is _DONE:
+                return
+            if isinstance(item, BaseException):
+                raise item
+            if item != last:
+                if item.startswith(last):
+                    delta = item[len(last):]
+                else:
+                    delta = item  # text was rewritten; emit as-is
+                last = item
+                if delta:
+                    yield delta
 
     # ------------------------------------------------------------------
     # Private — browser interaction
     # ------------------------------------------------------------------
 
-    async def _interact(self, prompt: str, images: list) -> str:
-        """Open a new ChatGPT session, attach images, send the prompt, scrape the reply."""
+    async def _interact(self, prompt: str, images: list, on_text=None) -> str:
+        """Open a new ChatGPT session, attach images, send the prompt, scrape the reply.
+
+        *on_text* — optional callback receiving the full current response text
+        each time it changes (used for streaming).
+        """
         context = await self.browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -144,6 +215,8 @@ class BrowserEngine(threading.Thread):
                     else:
                         last_text = current_text
                         unchanged_count = 0
+                        if on_text is not None:
+                            on_text(current_text)
                 await asyncio.sleep(0.5)
 
             return last_text.strip()

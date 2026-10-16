@@ -18,6 +18,7 @@ class ChatCompletionRequest(BaseModel):
     messages: List[Message] = Field(..., description="The conversation messages.")
     model: str = Field(default="gpt-4o-mini", description="Model identifier.")
     tools: Optional[List[Dict[str, Any]]] = Field(default=None, description="Available tools for function calling.")
+    stream: Optional[bool] = Field(default=False, description="Stream SSE chunks.")
     temperature: Optional[float] = Field(default=None, description="Sampling temperature (ignored).")
     max_tokens: Optional[int] = Field(default=None, description="Max tokens (ignored).")
 

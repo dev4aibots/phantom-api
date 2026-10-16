@@ -17,7 +17,11 @@ MAX_BYTES = 10 * 1024 * 1024  # 10 MB per image
 
 
 def extract_image_urls(messages: list) -> list:
-    """Pull image_url parts out of OpenAI-style messages, in order."""
+    """Pull image parts out of OpenAI-style messages, in order.
+
+    Handles both Chat Completions parts ({"type": "image_url", "image_url": {"url"}})
+    and Responses API parts ({"type": "input_image", "image_url": "<url>"}).
+    """
     urls: list = []
     for msg in messages:
         if not isinstance(msg, dict):
@@ -26,10 +30,17 @@ def extract_image_urls(messages: list) -> list:
         if not isinstance(content, list):
             continue
         for item in content:
-            if not isinstance(item, dict) or item.get("type") != "image_url":
+            if not isinstance(item, dict):
                 continue
-            iu = item.get("image_url", {})
-            url = iu.get("url") if isinstance(iu, dict) else None
+            itype = item.get("type")
+            if itype == "image_url":
+                iu = item.get("image_url", {})
+                url = iu.get("url") if isinstance(iu, dict) else None
+            elif itype == "input_image":
+                iu = item.get("image_url")
+                url = iu if isinstance(iu, str) else (iu.get("url") if isinstance(iu, dict) else None)
+            else:
+                continue
             if url:
                 urls.append(url)
     return urls[:MAX_IMAGES]

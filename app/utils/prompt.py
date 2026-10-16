@@ -33,9 +33,11 @@ def format_prompt(messages: list[dict[str, Any]], tools: list | None = None) -> 
             image_count = 0
             for item in content:
                 if isinstance(item, dict):
-                    if item.get("type") == "image_url":
+                    itype = item.get("type")
+                    if itype in ("image_url", "input_image"):
                         image_count += 1
                         continue
+                    # Responses API uses input_text; chat API uses text
                     text_bits.append(item.get("text", item.get("content", str(item))))
                 else:
                     text_bits.append(str(item))

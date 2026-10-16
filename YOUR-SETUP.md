@@ -26,10 +26,35 @@ Send images the standard OpenAI way and Luna will see them:
 ```
 
 - Accepts `data:` URLs and `http(s)` URLs (max 5 images, 10 MB each).
+- Works on both `/v1/chat/completions` (`image_url` parts) and `/v1/responses`
+  (`input_image` parts).
 - Images are uploaded into the ChatGPT composer automatically before your
   prompt is sent; the text part is sent alongside a marker noting the images.
 - If an image can't be fetched or the attach fails, the request continues
   text-only with a warning in the logs — never a hard failure.
+
+## Tool calling — supported
+
+Pass `tools` (OpenAI function format) on either endpoint. The gateway instructs
+Luna to reply with structured JSON and converts it into real `tool_calls`
+(`chat.completions`) or `function_call` output items (`/responses`), with
+`call_*` IDs. Also accepts a bare `{"name": ..., "arguments": ...}` reply.
+
+## Streaming — supported
+
+`"stream": true` on `/v1/chat/completions` returns SSE
+`chat.completion.chunk` frames ending with `data: [DONE]` (tool calls, if any,
+arrive as a final delta). `/v1/responses` streams `response.created` →
+`response.output_text.delta` → `response.completed` events.
+
+## Load & requests
+
+- At most `MAX_CONCURRENT_CHATS` (default 2) browser chats run simultaneously;
+  extra requests wait up to `QUEUE_TIMEOUT` seconds (default 60), then get
+  HTTP 503 "server busy" instead of hanging.
+- Blocking browser work runs in worker threads — the API stays responsive.
+- `GET /v1/stats` shows live load: total/ok/errors/busy-rejected counts,
+  in-flight requests, average latency, uptime.
 
 ## Your secure.env (optional now)
 

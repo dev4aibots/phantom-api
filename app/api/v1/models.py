@@ -1,6 +1,9 @@
-"""PhantomAPI — GET /v1/models."""
+"""PhantomAPI — GET /v1/models, GET /v1/stats."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.dependencies import verify_api_key
+from app.utils import metrics
 
 router = APIRouter()
 
@@ -18,3 +21,9 @@ async def list_models():
             {"id": "luna", "object": "model", "owned_by": "phantom-api"},
         ],
     }
+
+
+@router.get("/stats", dependencies=[Depends(verify_api_key)])
+async def get_stats():
+    """Load snapshot: totals, in-flight requests, errors, latency."""
+    return {"object": "stats", "data": metrics.snapshot()}

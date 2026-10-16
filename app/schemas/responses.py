@@ -11,5 +11,6 @@ class ResponsesRequest(BaseModel):
     model: str = Field(default="gpt-4o-mini", description="Model identifier.")
     tools: Optional[List[Dict[str, Any]]] = Field(default=None, description="A list of tools the model may call.")
     instructions: Optional[str] = Field(default="", description="System instructions.")
+    stream: Optional[bool] = Field(default=False, description="Stream SSE events.")
 
     model_config = {"json_schema_extra": {"examples": [{"input": "Hello!", "model": "gpt-4o-mini"}]}}

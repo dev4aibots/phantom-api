@@ -1,17 +1,20 @@
 """PhantomAPI — POST /v1/responses."""
 
+import asyncio
+
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 
 from app.dependencies import verify_api_key
 from app.schemas.responses import ResponsesRequest
-from app.services.chat import process_responses_api
+from app.services.chat import process_responses_api, stream_responses_api
 
 router = APIRouter()
 
 
 @router.post("/responses", dependencies=[Depends(verify_api_key)])
 async def responses(payload: ResponsesRequest):
-    """Modern Responses API endpoint for newer n8n versions."""
+    """Modern Responses API endpoint for newer n8n versions (SSE streaming supported)."""
     data = payload.model_dump()
     input_data = data.get("input", "")
 
@@ -28,4 +31,10 @@ async def responses(payload: ResponsesRequest):
     if instructions:
         messages.insert(0, {"role": "system", "content": instructions})
 
-    return process_responses_api(messages, data["model"], data.get("tools"))
+    model, tools = data["model"], data.get("tools")
+    if data.get("stream"):
+        return StreamingResponse(
+            stream_responses_api(messages, model, tools),
+            media_type="text/event-stream",
+        )
+    return await asyncio.to_thread(process_responses_api, messages, model, tools)

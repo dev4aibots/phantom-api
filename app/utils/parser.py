@@ -36,6 +36,9 @@ def parse_tool_calls(response_text: str) -> list[dict] | None:
                 raw_calls = parsed["tool_calls"]
                 if isinstance(raw_calls, list) and len(raw_calls) > 0:
                     return _format_calls(raw_calls)
+            # Fallback: bare single call {"name": ..., "arguments": ...}
+            if isinstance(parsed, dict) and "name" in parsed and "tool_calls" not in parsed:
+                return _format_calls([parsed])
         except (json.JSONDecodeError, TypeError, KeyError):
             continue
 
