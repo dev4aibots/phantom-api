@@ -36,14 +36,17 @@ class BrowserEngine(threading.Thread):
         self.loop.run_forever()
 
     async def _launch(self) -> None:
-        """Launch a stealth Chromium browser."""
+        """Launch a stealth Chromium browser.
+
+        Prefers real Google Chrome; falls back to Playwright's bundled
+        Chromium when Chrome isn't installed.
+        """
         from playwright.async_api import async_playwright
 
         print("[PhantomAPI] 🚀 Launching browser...")
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(
+        launch_kwargs = dict(
             headless=settings.HEADLESS,
-            channel="chrome",
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
@@ -52,6 +55,13 @@ class BrowserEngine(threading.Thread):
                 "--disable-setuid-sandbox",
             ],
         )
+        try:
+            self.browser = await self.playwright.chromium.launch(
+                channel="chrome", **launch_kwargs
+            )
+        except Exception as exc:
+            print(f"[PhantomAPI] ⚠️ Google Chrome not found ({exc}); using bundled Chromium")
+            self.browser = await self.playwright.chromium.launch(**launch_kwargs)
 
     # ------------------------------------------------------------------
     # Public API
@@ -106,11 +116,13 @@ class BrowserEngine(threading.Thread):
             if images:
                 await self._attach_images(page, images)
 
-            # Type the prompt
-            await page.wait_for_selector("#prompt-textarea", timeout=60000)
-            await page.fill("#prompt-textarea", prompt)
+            # Find the composer (ChatGPT's DOM changes over time; try known selectors)
+            composer = await self._find_composer(page)
+
+            # Type the prompt and send it
+            await composer.fill(prompt)
             await asyncio.sleep(0.5)
-            await page.press("#prompt-textarea", "Enter")
+            await self._send_prompt(page, composer)
 
             # Wait for the assistant to start responding
             await page.wait_for_selector(
@@ -142,6 +154,44 @@ class BrowserEngine(threading.Thread):
         finally:
             await page.close()
             await context.close()
+
+    async def _find_composer(self, page):
+        """Locate the ChatGPT composer, trying known selectors in order.
+
+        ChatGPT's DOM changes over time (#prompt-textarea is gone as of
+        2026-10; the mobile textarea #mobile-composer-prompt is current).
+        Returns the first visible match or raises after all fail.
+        """
+        selectors = [
+            "#prompt-textarea",
+            "#mobile-composer-prompt",
+            'div[role="textbox"]',
+            '[contenteditable="true"]',
+            "[contenteditable]",
+        ]
+        for sel in selectors:
+            try:
+                loc = page.locator(sel)
+                await loc.first.wait_for(state="visible", timeout=10000)
+                print(f"[PhantomAPI] 📝 Composer found: {sel}")
+                return loc.first
+            except Exception:
+                continue
+        raise RuntimeError("Could not find the ChatGPT composer (tried: %s)" % ", ".join(selectors))
+
+    async def _send_prompt(self, page, composer) -> None:
+        """Submit the typed prompt via send button, falling back to Enter."""
+        for sel in ['button[data-testid="send-button"]', 'button[aria-label*="Send"]']:
+            try:
+                btn = page.locator(sel).first
+                await btn.wait_for(state="visible", timeout=5000)
+                await btn.click()
+                print(f"[PhantomAPI] 📤 Sent via button ({sel})")
+                return
+            except Exception:
+                continue
+        await composer.press("Enter")
+        print("[PhantomAPI] 📤 Sent via Enter")
 
     async def _attach_images(self, page, images: list) -> None:
         """Upload image files into the ChatGPT composer (vision support).
