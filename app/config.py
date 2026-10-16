@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # --- Server ---
     HOST: str = "0.0.0.0"
-    PORT: int = 7777
+    PORT: int = 48526
 
     # --- Browser Engine ---
     HEADLESS: bool = True

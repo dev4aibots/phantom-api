@@ -24,14 +24,25 @@ def format_prompt(messages: list[dict[str, Any]], tools: list | None = None) -> 
         msg_type = msg.get("type", "")
         content = msg.get("content", "")
 
-        # Normalise list-style content (multimodal messages)
+        # Normalise list-style content (multimodal messages).
+        # Image parts are handled separately by the vision module (uploaded
+        # into the ChatGPT composer) — here we only keep text and leave a
+        # marker so the model knows images were attached.
         if isinstance(content, list):
             text_bits = []
+            image_count = 0
             for item in content:
                 if isinstance(item, dict):
+                    if item.get("type") == "image_url":
+                        image_count += 1
+                        continue
                     text_bits.append(item.get("text", item.get("content", str(item))))
                 else:
                     text_bits.append(str(item))
+            if image_count:
+                text_bits.append(
+                    f"[{image_count} image(s) attached above — look at them and use them to answer]"
+                )
             content = "\n".join(text_bits)
 
         if role == "system":

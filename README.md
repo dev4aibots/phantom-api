@@ -84,13 +84,13 @@ cp .env.example .env
 python run.py
 ```
 
-The server will start on `http://localhost:7777`.
+The server will start on `http://localhost:48526`.
 
 | Endpoint | Description |
 |:---|:---|
-| `http://localhost:7777/` | Health check |
-| `http://localhost:7777/docs` | Swagger UI (interactive API docs) |
-| `http://localhost:7777/gui` | Chat GUI for quick testing |
+| `http://localhost:48526/` | Health check |
+| `http://localhost:48526/docs` | Swagger UI (interactive API docs) |
+| `http://localhost:48526/gui` | Chat GUI for quick testing |
 
 ---
 
@@ -103,17 +103,17 @@ The server will start on `http://localhost:7777`.
 ### Method 1: OpenAI Node (Recommended)
 
 1. In n8n, go to **Credentials → New → OpenAI API**
-2. Set **Base URL** to: `http://127.0.0.1:7777/v1`
+2. Set **Base URL** to: `http://127.0.0.1:48526/v1`
 3. Set **API Key** to your `API_SECRET_KEY` from `.env`
 4. Use this credential in any **OpenAI** or **AI Agent** node
 
-> **Docker Tip:** If n8n runs in Docker, use `http://host.docker.internal:7777/v1`
+> **Docker Tip:** If n8n runs in Docker, use `http://host.docker.internal:48526/v1`
 
 ### Method 2: HTTP Request Node
 
 1. Add an **HTTP Request** node
 2. **Method:** `POST`
-3. **URL:** `http://127.0.0.1:7777/v1/chat/completions`
+3. **URL:** `http://127.0.0.1:48526/v1/chat/completions`
 4. **Authentication:** Header Auth → `Authorization: Bearer YOUR_KEY`
 5. **Body (JSON):**
 
@@ -168,7 +168,7 @@ phantom-api/
 # Build and run
 docker-compose up --build -d
 
-# The server is now running on http://localhost:7777
+# The server is now running on http://localhost:48526
 ```
 
 ---

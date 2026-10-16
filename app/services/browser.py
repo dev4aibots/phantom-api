@@ -57,8 +57,11 @@ class BrowserEngine(threading.Thread):
     # Public API
     # ------------------------------------------------------------------
 
-    def chat(self, prompt: str) -> str:
+    def chat(self, prompt: str, images: list | None = None) -> str:
         """Send a prompt to ChatGPT and return the response text.
+
+        *images* — optional list of local image file paths to upload into the
+        composer before sending (vision support).
 
         This is a blocking call that schedules work on the browser
         thread's event loop and waits for the result.
@@ -67,7 +70,7 @@ class BrowserEngine(threading.Thread):
             raise RuntimeError("Browser engine is not ready. Is Chrome installed?")
 
         future = asyncio.run_coroutine_threadsafe(
-            self._interact(prompt), self.loop
+            self._interact(prompt, images or []), self.loop
         )
         return future.result(timeout=settings.BROWSER_TIMEOUT // 1000 + 30)
 
@@ -75,8 +78,8 @@ class BrowserEngine(threading.Thread):
     # Private — browser interaction
     # ------------------------------------------------------------------
 
-    async def _interact(self, prompt: str) -> str:
-        """Open a new ChatGPT session, send the prompt, and scrape the reply."""
+    async def _interact(self, prompt: str, images: list) -> str:
+        """Open a new ChatGPT session, attach images, send the prompt, scrape the reply."""
         context = await self.browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -98,6 +101,10 @@ class BrowserEngine(threading.Thread):
 
             # Navigate to ChatGPT
             await page.goto("https://chatgpt.com/", wait_until="domcontentloaded")
+
+            # Attach images first (vision) — best effort, never fatal
+            if images:
+                await self._attach_images(page, images)
 
             # Type the prompt
             await page.wait_for_selector("#prompt-textarea", timeout=60000)
@@ -135,6 +142,22 @@ class BrowserEngine(threading.Thread):
         finally:
             await page.close()
             await context.close()
+
+    async def _attach_images(self, page, images: list) -> None:
+        """Upload image files into the ChatGPT composer (vision support).
+
+        Best effort: if the file input can't be found (UI changed), log and
+        continue text-only rather than failing the request.
+        """
+        try:
+            file_input = page.locator('input[type="file"]')
+            await file_input.first.wait_for(timeout=15000)
+            await file_input.first.set_input_files([str(p) for p in images])
+            # Give the composer a moment to register the attachments
+            await page.wait_for_timeout(2500)
+            print(f"[PhantomAPI] 🖼️ Attached {len(images)} image(s) to composer")
+        except Exception as exc:
+            print(f"[PhantomAPI] ⚠️ Image attach failed, continuing text-only: {exc}")
 
 
 # ---------------------------------------------------------------------------

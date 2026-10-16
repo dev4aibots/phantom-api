@@ -8,12 +8,15 @@ GPT-5.6 Luna model. ANY model string a client requests is resolved to Luna —
 there is exactly one backend model.
 """
 
+import shutil
+import tempfile
 import time
 import uuid
 
 from app.services.browser import engine
 from app.utils.prompt import format_prompt
 from app.utils.parser import parse_tool_calls
+from app.utils.vision import extract_image_urls, materialize_images
 
 LUNA_MODEL = "gpt-5.6-luna"
 
@@ -25,35 +28,60 @@ def resolve_model(requested: str | None) -> str:
     return LUNA_MODEL
 
 
+def prepare_images(messages: list) -> tuple:
+    """Extract image parts and materialize to temp files.
+
+    Returns (paths, cleanup_dir). Caller must remove cleanup_dir afterwards.
+    """
+    urls = extract_image_urls(messages)
+    if not urls:
+        return [], None
+    tmp_dir = tempfile.mkdtemp(prefix="phantom_vision_")
+    paths = materialize_images(urls, tmp_dir)
+    if paths:
+        print(f"[PhantomAPI] 🖼️ {len(paths)} image(s) ready for upload")
+    return paths, tmp_dir
+
+
 def process_chat_completion(messages: list, model: str, tools: list | None = None) -> dict:
     """Process a chat completion request and return an OpenAI-compatible response."""
     model = resolve_model(model)
-    prompt = format_prompt(messages, tools=tools)
-    start = time.time()
+    image_paths, tmp_dir = prepare_images(messages)
+    try:
+        prompt = format_prompt(messages, tools=tools)
+        start = time.time()
 
-    print(f"[PhantomAPI] 📨 Request ({len(prompt)} chars)")
-    response_text = engine.chat(prompt)
+        print(f"[PhantomAPI] 📨 Request ({len(prompt)} chars)")
+        response_text = engine.chat(prompt, images=image_paths)
 
-    p_tokens = len(prompt.split())
-    c_tokens = len(response_text.split())
-    tool_calls = parse_tool_calls(response_text) if tools else None
+        p_tokens = len(prompt.split())
+        c_tokens = len(response_text.split())
+        tool_calls = parse_tool_calls(response_text) if tools else None
 
-    return _build_chat_response(response_text, tool_calls, model, int(start), p_tokens, c_tokens)
+        return _build_chat_response(response_text, tool_calls, model, int(start), p_tokens, c_tokens)
+    finally:
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def process_responses_api(messages: list, model: str, tools: list | None = None) -> dict:
     """Process a Responses API request and return the formatted response."""
     model = resolve_model(model)
-    prompt = format_prompt(messages, tools=tools)
-    start = time.time()
+    image_paths, tmp_dir = prepare_images(messages)
+    try:
+        prompt = format_prompt(messages, tools=tools)
+        start = time.time()
 
-    response_text = engine.chat(prompt)
+        response_text = engine.chat(prompt, images=image_paths)
 
-    p_tokens = len(prompt.split())
-    c_tokens = len(response_text.split())
-    tool_calls = parse_tool_calls(response_text) if tools else None
+        p_tokens = len(prompt.split())
+        c_tokens = len(response_text.split())
+        tool_calls = parse_tool_calls(response_text) if tools else None
 
-    return _build_responses_response(response_text, tool_calls, model, int(start), p_tokens, c_tokens)
+        return _build_responses_response(response_text, tool_calls, model, int(start), p_tokens, c_tokens)
+    finally:
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
