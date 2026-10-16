@@ -3,17 +3,28 @@
 Prepared by Igris for Devraj. This turns ChatGPT's free web chat (Luna) into an
 OpenAI-compatible API you can plug into Cursor, Cline, n8n, or any OpenAI client.
 
-## Your API key
+## Luna mode — how this build behaves
 
-Your personal key lives in **`secure.env` on your Google Drive** (link below) —
-it is NOT in this repo. After cloning:
+- **API key: any string works.** Send any `Authorization: Bearer <anything>` —
+  `sk-test`, `hello`, whatever. Only a missing/empty key is rejected.
+  (Your `secure.env` key from Drive still works too; it's just no longer special.)
+- **Model: any string = Luna.** Request `gpt-4o`, `luna`, `anything-at-all` —
+  every request is served by GPT-5.6 Luna (the free web chat). `/v1/models`
+  lists `gpt-5.6-luna` and `luna`.
+- **No real authentication.** Anyone who can reach your machine's port can use
+  it — keep `HOST=127.0.0.1` in `.env` so only your own computer can connect.
+
+## Your secure.env (optional now)
+
+Your personal key lives in **`secure.env` on your Google Drive**.
+Since any string works as the key, this file is now just a convenience —
+use its key or any string you like. It is NOT in this repo. After cloning:
 
 ```bash
 cp /path/to/secure.env .env
 ```
 
-(`secure.env` content = the `.env` this gateway needs, including your
-`API_SECRET_KEY`. Keep it private — anyone with it can use your gateway.)
+Base URL once running: `http://127.0.0.1:7777/v1`
 
 ## Run it on YOUR computer (it cannot run on the sandbox — see Limits)
 

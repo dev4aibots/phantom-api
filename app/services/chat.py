@@ -2,6 +2,10 @@
 
 All business logic for processing chat requests lives here.
 Route handlers call these functions and return the result directly.
+
+Luna mode: the gateway drives ChatGPT's free web chat, which serves the
+GPT-5.6 Luna model. ANY model string a client requests is resolved to Luna —
+there is exactly one backend model.
 """
 
 import time
@@ -11,9 +15,19 @@ from app.services.browser import engine
 from app.utils.prompt import format_prompt
 from app.utils.parser import parse_tool_calls
 
+LUNA_MODEL = "gpt-5.6-luna"
+
+
+def resolve_model(requested: str | None) -> str:
+    """Map any requested model string to the Luna backend model."""
+    if requested and requested != LUNA_MODEL:
+        print(f"[PhantomAPI] 🔁 Model '{requested}' -> '{LUNA_MODEL}' (Luna)")
+    return LUNA_MODEL
+
 
 def process_chat_completion(messages: list, model: str, tools: list | None = None) -> dict:
     """Process a chat completion request and return an OpenAI-compatible response."""
+    model = resolve_model(model)
     prompt = format_prompt(messages, tools=tools)
     start = time.time()
 
@@ -29,6 +43,7 @@ def process_chat_completion(messages: list, model: str, tools: list | None = Non
 
 def process_responses_api(messages: list, model: str, tools: list | None = None) -> dict:
     """Process a Responses API request and return the formatted response."""
+    model = resolve_model(model)
     prompt = format_prompt(messages, tools=tools)
     start = time.time()
 

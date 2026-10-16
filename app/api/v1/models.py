@@ -7,11 +7,14 @@ router = APIRouter()
 
 @router.get("/models")
 async def list_models():
-    """Return available models for n8n model dropdown."""
+    """Return available models for n8n model dropdown.
+
+    Luna mode: the only backend model is GPT-5.6 Luna (free web chat).
+    """
     return {
         "object": "list",
         "data": [
-            {"id": "gpt-4o-mini", "object": "model", "owned_by": "phantom-api"},
-            {"id": "gpt-4o", "object": "model", "owned_by": "phantom-api"},
+            {"id": "gpt-5.6-luna", "object": "model", "owned_by": "phantom-api"},
+            {"id": "luna", "object": "model", "owned_by": "phantom-api"},
         ],
     }
