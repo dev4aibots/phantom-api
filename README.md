@@ -1,6 +1,6 @@
 <div align="center">
 
-# 👻 PhantomAPI
+# PhantomAPI
 
 ### Turn ChatGPT into a FREE OpenAI-Compatible API
 
@@ -11,7 +11,7 @@
 
 **The invisible proxy that bridges ChatGPT's free web interface with your AI automation workflows.**
 
-[Quick Start](#-quick-start) · [n8n Integration](#-connecting-to-n8n) · [Architecture](#-architecture) · [Docker](#-docker-deployment)
+[Quick Start](#quick-start) · [n8n Integration](#connecting-to-n8n) · [Architecture](#architecture) · [Docker](#docker-deployment)
 
 </div>
 
@@ -21,25 +21,25 @@
 
 ---
 
-## 🌟 What is PhantomAPI?
+## What is PhantomAPI?
 
 **PhantomAPI** is a high-performance proxy server that makes ChatGPT's free web interface behave like the official OpenAI API. It's designed as a **drop-in replacement** for any tool that speaks the OpenAI protocol — especially **n8n**.
 
-### ✨ Key Features
+### Key Features
 
 | Feature | Description |
 |:---|:---|
-| 💸 **Zero API Costs** | Uses ChatGPT's free web interface via headless browser automation |
-| ⚡ **Async Architecture** | Built on FastAPI with a dedicated browser thread for non-blocking requests |
-| 🤖 **AI Agent Support** | Full tool-calling / function-calling support for n8n Agent nodes |
-| 🔒 **API Key Auth** | Protected with Bearer token authentication |
-| 🐳 **Docker Ready** | Deploy in seconds with `docker-compose up` |
-| 🎨 **Built-in GUI** | A sleek dark-mode chat interface for quick testing |
-| 📐 **Clean Architecture** | Proper FastAPI structure — routers, schemas, services, utils |
+| **Zero API Costs** | Uses ChatGPT's free web interface via headless browser automation |
+| **Async Architecture** | Built on FastAPI with a dedicated browser thread for non-blocking requests |
+| **AI Agent Support** | Full tool-calling / function-calling support for n8n Agent nodes |
+| **API Key Auth** | Protected with Bearer token authentication |
+| **Docker Ready** | Deploy in seconds with `docker-compose up` |
+| **Built-in GUI** | A sleek dark-mode chat interface for quick testing |
+| **Clean Architecture** | Proper FastAPI structure — routers, schemas, services, utils |
 
 ---
 
-## ⚙️ How It Works
+## How It Works
 
 ```
 ┌──────────┐     HTTP/JSON      ┌──────────────┐     Playwright     ┌──────────────┐
@@ -56,7 +56,7 @@
 
 ---
 
-## 🛠️ Quick Start
+## Quick Start
 
 ### Prerequisites
 - **Python 3.10+**
@@ -65,7 +65,7 @@
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/mrshibly/phantom-api.git
+git clone https://github.com/dev4aibots/phantom-api.git
 cd phantom-api
 pip install -r requirements.txt
 python -m playwright install chromium
@@ -94,7 +94,7 @@ The server will start on `http://localhost:48526`.
 
 ---
 
-## 🔌 Connecting to n8n
+## Connecting to n8n
 
 <div align="center">
   <img src="n8n_preview.png" width="800" alt="n8n Workflow Example">
@@ -128,7 +128,7 @@ The server will start on `http://localhost:48526`.
 
 ---
 
-## 📐 Architecture
+## Architecture
 
 ```
 phantom-api/
@@ -162,7 +162,7 @@ phantom-api/
 
 ---
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ```bash
 # Build and run
@@ -173,7 +173,7 @@ docker-compose up --build -d
 
 ---
 
-## 🔧 API Reference
+## API Reference
 
 ### `POST /v1/chat/completions`
 
@@ -193,7 +193,7 @@ Health check — returns server status and version.
 
 ---
 
-## 📄 License
+## License
 
 This project is open-sourced under the [MIT License](LICENSE).
 
@@ -201,6 +201,6 @@ This project is open-sourced under the [MIT License](LICENSE).
 
 <div align="center">
 
-**Built with ❤️ by [mrshibly](https://github.com/mrshibly)**
+**Built by [mrshibly](https://github.com/mrshibly)**
 
 </div>

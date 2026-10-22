@@ -73,7 +73,7 @@ Base URL once running: `http://127.0.0.1:48526/v1`
 Prerequisites: Python 3.10+, Google Chrome installed.
 
 ```bash
-git clone https://github.com/mrshibly/PhantomAPI.git
+git clone https://github.com/dev4aibots/phantom-api.git
 cd PhantomAPI
 pip install -r requirements.txt
 cp .env.example .env
